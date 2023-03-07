@@ -74,6 +74,3 @@ class PitchingData:
 
     def test_labels(self) -> pd.DataFrame:
         return self._test_labels
-
-
-PitchingData().view_merged_data()
