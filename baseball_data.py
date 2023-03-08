@@ -27,7 +27,7 @@ class PitchingData:
                                                 "FIP", "IP", "SO", "K%",
                                                 "K/9", "HR/9", "BB/9", "WAR"]]
         pitching_stats["win_percentage"] = pitching_stats["W"] /\
-            pitching_stats["L"]
+            (pitching_stats["W"] + pitching_stats["L"])
 
         player_ids = pd.read_csv("players.csv", encoding="latin-1")
         bad_ids = ["richaj.01", "garcifr03", "santajo02", "sabatc.01",
