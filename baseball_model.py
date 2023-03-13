@@ -38,7 +38,6 @@ class PitchingModel:
         subsample = np.arange(0.5, 1.0, 0.1) # ratio of the training instances
         # shrinks the feature weights to make the boosting process more conservative
         learning_rate = [0.01, 0.1, 0.2, 0.3]
-        bootstrap = [True, False]  # method used to sample data points
         parameters = {'max_depth': max_depth,
                       'learning_rate': learning_rate,
                       'subsample': subsample,
