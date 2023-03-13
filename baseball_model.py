@@ -3,7 +3,6 @@ import pandas as pd
 import xgboost as xgb
 from scipy.stats import pearsonr
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.inspection import permutation_importance
 from sklearn.metrics import mean_absolute_error
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.linear_model import LinearRegression
@@ -14,11 +13,17 @@ from sklearn.model_selection import GridSearchCV
 
 class PitchingModel:
     '''
-    .
+    This class trains and implements machine learning models in order to
+    attempt to predict Cy Young vote totals. This class will use a variety of
+    different models to predict the Cy Young voting and calculate the
+    importance or the features.
     '''
     def __init__(self, start_year: int, end_year: int) -> None:
         '''
-        .
+        This method initializes the PitchingModel class using methods from
+        the PitchingData class to set objects to be used later. A new
+        PitchingData object is created using the given start and end year
+        parameters
         '''
         pitching = PitchingData(start_year, end_year)
         self._train_features: pd.DataFrame = pitching.train_features()
@@ -31,12 +36,19 @@ class PitchingModel:
         self._relief_pitchers: pd.DataFrame = pitching.relief_pitchers()
 
     def xgboost_model(self) -> float:
+        '''
+        Uses the xgboost machine learning model and database to train and
+        optimize the parameters for a model to predict Cy Young voting
+        results. Returns the mean absolute error and makes a graph of the
+        importance's in the model
+        '''
         # number of trees in the random forest
         n_estimators = [100, 500, 1000]
         # maximum number of levels allowed in each decision tree
         max_depth = [3, 5, 6, 10, 15, 20]
-        subsample = np.arange(0.5, 1.0, 0.1) # ratio of the training instances
-        # shrinks the feature weights to make the boosting process more conservative
+        subsample = np.arange(0.5, 1.0, 0.1)  # ratio of the training instances
+        # shrinks the feature weights to make the boosting process
+        # more conservative
         learning_rate = [0.01, 0.1, 0.2, 0.3]
         parameters = {'max_depth': max_depth,
                       'learning_rate': learning_rate,
@@ -56,12 +68,19 @@ class PitchingModel:
         return grid_search.best_score_
 
     def random_forest_model(self) -> float:
+        '''
+        Uses the random forest machine learning model and database to train
+        and optimize the parameters for a model to predict Cy Young voting
+        results. Returns the mean absolute error and makes a graph of the
+        importance's in the model
+        '''
         # number of trees in the random forest
         n_estimators = [5, 20, 50, 100]
         # maximum number of levels allowed in each decision tree
         max_depth = [int(x) for x in
                      np.linspace(10, 120, num=12)]
-        min_samples_split = [2, 6, 10]  # minimum sample number to split a node
+        # minimum sample number to split a node
+        min_samples_split = [2, 6, 10]
         # minimum sample number that can be stored in a leaf node
         min_samples_leaf = [1, 3, 4]
         bootstrap = [True, False]  # method used to sample data points
@@ -84,6 +103,12 @@ class PitchingModel:
         return grid_search.best_score_
 
     def decision_tree_model(self) -> float:
+        '''
+        Uses the decision tree machine learning model and database to train
+        and optimize the parameters for a model to predict Cy Young voting
+        results. Returns the mean absolute error and makes a graph of the
+        importance's in the model
+        '''
         model = DecisionTreeRegressor()
         # Strategy to split node, either 'best' or 'random'
         splitters = ["best", "random"]
