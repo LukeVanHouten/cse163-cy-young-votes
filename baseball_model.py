@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import xgboost as xgb
 from scipy.stats import pearsonr
@@ -8,6 +9,7 @@ from sklearn.tree import DecisionTreeRegressor
 from sklearn.linear_model import LinearRegression
 from matplotlib import pyplot as plt
 from baseball_data import PitchingData
+from sklearn.model_selection import GridSearchCV
 
 
 class PitchingModel:
@@ -29,36 +31,84 @@ class PitchingModel:
         self._relief_pitchers: pd.DataFrame = pitching.relief_pitchers()
 
     def xgboost_model(self) -> float:
-        xgb_r = xgb.XGBRegressor(n_estimators=1000, max_depth=10, eta=0.1,
-                                 subsample=1.0, colsample_bytree=1.0)
-        xgb_r.fit(self._train_features, self._train_labels)
-        vote_pred = xgb_r.predict(self._test_features)
-        error = mean_absolute_error(self._test_labels, vote_pred)
-        return error
+        # number of trees in the random forest
+        n_estimators = [100, 500, 1000]
+        # maximum number of levels allowed in each decision tree
+        max_depth = [3, 5, 6, 10, 15, 20]
+        subsample = np.arange(0.5, 1.0, 0.1) # ratio of the training instances
+        # shrinks the feature weights to make the boosting process more conservative
+        learning_rate = [0.01, 0.1, 0.2, 0.3]
+        bootstrap = [True, False]  # method used to sample data points
+        parameters = {'max_depth': max_depth,
+                      'learning_rate': learning_rate,
+                      'subsample': subsample,
+                      'n_estimators': n_estimators}
+        xgb_r = xgb.XGBRegressor()
+        grid_search = GridSearchCV(estimator=xgb_r,
+                                   param_grid=parameters,
+                                   scoring='neg_mean_squared_error')
+        grid_search.fit(self._train_features, self._train_labels)
+        best_est = grid_search.best_estimator_
+        feat_importances = pd.Series(best_est.feature_importances_,
+                                     index=self._train_features.columns)
+        feat_importances.nlargest(5).plot(kind='barh')
+        plt.title("xgboost Importance")
+        plt.show()
+        return grid_search.best_score_
 
     def random_forest_model(self) -> float:
-        regressor = RandomForestRegressor(n_estimators=100, random_state=0)
-        regressor.fit(self._train_features, self._train_labels)
-        vote_pred = regressor.predict(self._test_features)
-        error = mean_absolute_error(self._test_labels, vote_pred)
-        perm_importance = permutation_importance(regressor,
-                                                 self._train_features,
-                                                 self._train_labels)
-        forest_importances = pd.Series(perm_importance.importances_mean,
-                                       index=self._test_features.
-                                       columns).sort_values(ascending=False)
-        plt.title("Random Forest Feature Importance")
-        forest_importances.plot.bar(yerr=perm_importance.importances_std)
-        plt.tight_layout()
+        # number of trees in the random forest
+        n_estimators = [5, 20, 50, 100]
+        # maximum number of levels allowed in each decision tree
+        max_depth = [int(x) for x in
+                     np.linspace(10, 120, num=12)]
+        min_samples_split = [2, 6, 10]  # minimum sample number to split a node
+        # minimum sample number that can be stored in a leaf node
+        min_samples_leaf = [1, 3, 4]
+        bootstrap = [True, False]  # method used to sample data points
+
+        parameters = {'n_estimators': n_estimators,
+                      'max_depth': max_depth,
+                      'min_samples_split': min_samples_split,
+                      'min_samples_leaf': min_samples_leaf,
+                      'bootstrap': bootstrap}
+        regressor = RandomForestRegressor()
+
+        grid_search = GridSearchCV(regressor, param_grid=parameters)
+        grid_search.fit(self._train_features, self._train_labels)
+        best_est = grid_search.best_estimator_
+        feat_importances = pd.Series(best_est.feature_importances_,
+                                     index=self._train_features.columns)
+        feat_importances.nlargest(5).plot(kind='barh')
+        plt.title("Random Forest Importance")
         plt.show()
-        return error
+        return grid_search.best_score_
 
     def decision_tree_model(self) -> float:
         model = DecisionTreeRegressor()
-        model.fit(self._train_features, self._train_labels)
-        vote_pred = model.predict(self._test_features)
-        error = mean_absolute_error(self._test_labels, vote_pred)
-        return error
+        # Strategy to split node, either 'best' or 'random'
+        splitters = ["best", "random"]
+        # maximum number of levels allowed in each decision tree
+        max_depth = [1, 3, 5, 7, 9, 11, 12]
+        # minimum sample number that can be stored in a leaf node
+        min_samples_leaf = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        # The minimum weighted fraction of the sum total of weights
+        # (of all the input samples) required to be at a leaf node
+        min_weight_fraction_leaf = [0.1, 0.2, 0.3, 0.4, 0.5]
+        parameters = {"splitter": splitters,
+                      "max_depth": max_depth,
+                      "min_samples_leaf": min_samples_leaf,
+                      "min_weight_fraction_leaf": min_weight_fraction_leaf}
+        tuning_model = GridSearchCV(model, param_grid=parameters,
+                                    scoring='neg_mean_squared_error')
+        tuning_model.fit(self._train_features, self._train_labels)
+        best_est = tuning_model.best_estimator_
+        feat_importances = pd.Series(best_est.feature_importances_,
+                                     index=self._train_features.columns)
+        feat_importances.nlargest(5).plot(kind='barh')
+        plt.title("Decision Tree Importance")
+        plt.show()
+        return tuning_model.best_score_
 
     def compare_eras(self) -> None:
         '''
@@ -164,7 +214,7 @@ class PitchingModel:
         print()
 
         print("Differences between linear regression statistics for pitchers\
- before 1990 and after 1989:")
+              before 1990 and after 1989:")
         for z in regression_statistics_differences:
             print(str(z)[18:-1].replace("'", '').replace(",", " -", 1))
         return None
