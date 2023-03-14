@@ -1,3 +1,13 @@
+'''
+Aidan Murphy, Luke VanHouten
+CSE 163 section AH
+13 March 2023
+
+This program implements the class PitchingData to initialize the data used in
+our model to predict Cy Young Award vote points based on the pitching
+statistics of top-tier pitchers in Major League Baseball
+'''
+
 import pybaseball as pb
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -10,7 +20,8 @@ class PitchingData:
     then return the data split into training and testing features and labels
     for use in a machine learning model.
     '''
-    def __init__(self, start_year: int, end_year: int) -> None:
+    def __init__(self, start_year: int, end_year: int,
+                 id_filename: str) -> None:
         '''
         This method initializes the PitchingData class in order to load in
         data for stats for baseball pitchers, awards data to find the vote
@@ -19,6 +30,8 @@ class PitchingData:
         use in the ML model. The data for the pitcher stats is from FanGraphs,
         the data for the awards is from the Lahman baseball database, and the
         data for player IDs is from the Chadwick Bureau of baseball players.
+        The latter data is initialized with a string filename that also has to
+        be inputted along with the dates.
         '''
         # Loads in the awards data from the Lahman baseball database method
         # from the bypaseball module
@@ -72,7 +85,7 @@ class PitchingData:
         # Access the data for the player IDs. Because many players are from
         # Latin America and have accents in their names, we encode this data
         # in the latin-1 encoding in order to prevent any errors
-        player_ids = pd.read_csv("players.csv", encoding="latin-1")
+        player_ids = pd.read_csv(id_filename, encoding="latin-1")
         # Five players in this data do not have baseball-reference IDs that
         # match up with those from the Lahman database. These players are: J.R
         # Richard, Freddy Garcia, Johan Santana, CC Sabathia, and R.A. Dickey.
